@@ -8,6 +8,9 @@ def setCrosshairPoints(crosshairPoints)
 	mousex = get :mouse_x
 	mousey = get :mouse_y
 	size = 15
+	#we have two layers of points, the first and the second
+	#the second (4-7) is behind the first on the z axis
+	#it creates kind of a cool effect for crosshairrs
 	crosshairPoints[0].x = mousex - Window.width/2 + size
 	crosshairPoints[0].y = mousey - Window.height/2 + size
 	crosshairPoints[4].x = mousex - Window.width/2 + size
@@ -29,21 +32,64 @@ def setCrosshairPoints(crosshairPoints)
 	crosshairPoints[7].y = mousey - Window.height/2 + size
 end
 
+def drawTunnel(points, cam)
+	for i in 0..points.size do
+		#first we got some empty lists
+		coords1 = []
+		coords2 = []
+		coords3 = []
+		coords4 = []
+		if i < points.size-4
+			dz = points[i].z - cam.loc.z
+			if dz < 100 and dz > 0
+				#this just builds a quad for the walls of the tunnel
+				if (i % 4 != 3)
+					coords1 = points[i].getProjection(cam)
+					coords2 = points[i+1].getProjection(cam)
+					coords3 = points[i+5].getProjection(cam)
+					coords4 = points[i+4].getProjection(cam)
+				else
+					coords1 = points[i].getProjection(cam)
+					coords2 = points[i-3].getProjection(cam)
+					coords3 = points[i+1].getProjection(cam)
+					coords4 = points[i+4].getProjection(cam)
+				end
+				val = dz*2
+				# puts val
+				#change this lmao it makes them have random colors
+				Quad.new(
+				  x1: coords1[0], y1: coords1[1],
+				  x2: coords2[0], y2: coords2[1],
+				  x3: coords3[0], y3: coords3[1],
+				  x4: coords4[0], y4: coords4[1],
+				  color: "random",
+				  z: -10
+				)
+			end
+		end
+	end
+end
+
 def main
 	set title: "3d test"
 	set width: 1024
 	set height: 768
 
+	#movement flags for player
 	moving_up = false
 	moving_down = false
 	moving_left = false
 	moving_right = false
 
+	#camera for rendering outside world
 	cam = Camera.new(Window.width, Window.height)
+	#camera for rendering hud and crosshairs
 	personalCam = Camera.new(Window.width, Window.height)
+	#start behind the tunnel
 	cam.loc.z = -100
 	points = []
 
+	#build the tunnel
 	crosshairPoints = [Point3d.new(0,0,1),
 					   Point3d.new(0,0,1),
 					   Point3d.new(0,0,1),
@@ -64,18 +110,21 @@ def main
 		#top right
 		points.push(Point3d.new(10000,0,i*10))
 	end
-		
+	
+	#put the player in the middle of the tunnel
 	cam.loc.x = 5000
 	cam.loc.y = 5000
 
 	update do
+		#get rid of window contents
 		Window.clear
 		#logic here
 		cam.loc.z += 1
 
+		#get mouse location for crosshair
 		setCrosshairPoints(crosshairPoints)
 
-		#inputs
+		#keyboard events
 		on :key_down do |event|
 			case event.key
 			when "w"
@@ -102,8 +151,7 @@ def main
 			# puts event.key
 		end
 
-		# puts moving_left
-
+		#process inputs and movement flags
 		if (moving_right)
 			cam.loc.x += 200
 		end
@@ -117,7 +165,9 @@ def main
 			cam.loc.y += 200
 		end
 
-		#rendering from here down
+		#draw the tunnel
+		drawTunnel(points, cam)
+		#then draw the crosshair
 		crosshairPoints.each do |pnt|
 			coords = pnt.getProjection(personalCam)
 			Square.new(
@@ -127,7 +177,8 @@ def main
 				color: 'green')
 		end
 
-		# render tunnel points
+		#render the Cornes of the tunnel, might use later, idk
+		
 		# points.each do|pnt|
 		# 	coords = pnt.getProjection(cam)
 		# 	dz = pnt.z- cam.loc.z
@@ -141,36 +192,7 @@ def main
 		# 	end
 		# end
 		# rendering gray rectangles
-		for i in 0..points.size do
-			coords1 = []
-			coords2 = []
-			coords3 = []
-			coords4 = []
-			if i < points.size-4
-				dz = points[i].z - cam.loc.z
-				if dz < 100 and dz > 0
-					if (i % 4 != 3)
-						coords1 = points[i].getProjection(cam)
-						coords2 = points[i+1].getProjection(cam)
-						coords3 = points[i+5].getProjection(cam)
-						coords4 = points[i+4].getProjection(cam)
-					else
-						coords1 = points[i].getProjection(cam)
-						coords2 = points[i-3].getProjection(cam)
-						coords3 = points[i+1].getProjection(cam)
-						coords4 = points[i+4].getProjection(cam)
-					end
-					Quad.new(
-					  x1: coords1[0], y1: coords1[1],
-					  x2: coords2[0], y2: coords2[1],
-					  x3: coords3[0], y3: coords3[1],
-					  x4: coords4[0], y4: coords4[1],
-					  color: 'gray',
-					  z: 10
-					)
-				end
-			end
-		end
+		
 	end
 
 	show
