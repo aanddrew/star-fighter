@@ -8,6 +8,7 @@ If you want to run this program.
 
 Install the ruby2d gem from this guide:
   http://www.ruby2d.com/learn/get-started/
+  
 Then navigate to this directory and type:
   ruby main.rb
 
