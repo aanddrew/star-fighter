@@ -3,6 +3,8 @@ require 'ruby2d'
 # include Curses
 require_relative 'point3d'
 require_relative 'camera'
+require_relative 'enemy'
+require_relative 'bullet'
 
 def setCrosshairPoints(crosshairPoints)
 	mousex = get :mouse_x
@@ -41,7 +43,7 @@ def drawTunnel(points, cam)
 		coords4 = []
 		if i < points.size-4
 			dz = points[i].z - cam.loc.z
-			if dz < 100 and dz > 0
+			if dz < 100 and dz > -10
 				#this just builds a quad for the walls of the tunnel
 				if (i % 4 != 3)
 					coords1 = points[i].getProjection(cam)
@@ -62,7 +64,7 @@ def drawTunnel(points, cam)
 				  x2: coords2[0], y2: coords2[1],
 				  x3: coords3[0], y3: coords3[1],
 				  x4: coords4[0], y4: coords4[1],
-				  color: "random",
+				  color: ["green", 'blue', 'gray','red'],
 				  z: -10
 				)
 			end
@@ -87,7 +89,14 @@ def main
 	personalCam = Camera.new(Window.width, Window.height)
 	#start behind the tunnel
 	cam.loc.z = -100
-	points = []
+	points = []	
+	enemies = [Enemy.new(5000,5000,200)]
+	enemies.push(Enemy.new(rand(10000), rand(10000), cam.loc.z + 300))
+
+	player_bullets = []
+	enemy_bullets = []
+
+	# enemies.push(Enemy.new(5000,5000, 200))
 
 	#build the tunnel
 	crosshairPoints = [Point3d.new(0,0,1),
@@ -115,11 +124,12 @@ def main
 	cam.loc.x = 5000
 	cam.loc.y = 5000
 
+#BEGINNING UPDATE LOOP
 	update do
 		#get rid of window contents
 		Window.clear
 		#logic here
-		cam.loc.z += 1
+		cam.loc.z += 0.5
 
 		#get mouse location for crosshair
 		setCrosshairPoints(crosshairPoints)
@@ -151,6 +161,20 @@ def main
 			# puts event.key
 		end
 
+		on :mouse_down do |event|
+			case event.button
+			when :left
+				mousex = Window.mouse_x
+				mousey = Window.mouse_y
+				dx = mousex - Window.width/2
+				dy = mousey - Window.height/2
+				dx *= 10
+				dy *= 10
+				new_point = Point3d.new(cam.loc.x + dx, cam.loc.y + dy, cam.loc.z+5)
+				player_bullets.push(Bullet.new(new_point, 3))
+			end
+		end
+
 		#process inputs and movement flags
 		if (moving_right)
 			cam.loc.x += 200
@@ -173,8 +197,55 @@ def main
 			Square.new(
 				x: coords[0],
 				y: coords[1],
-				size: 5,
-				color: 'green')
+				size: 10,
+				color: 'green',
+				z: 100)
+		end
+
+		# if (enemies[0].loc.z < cam.loc.z)
+		# 	enemies[0] = Enemy.new(rand(10000), rand(10000), cam.loc.z + 300)
+		# end
+		# enemies.push(Enemy.new(rand(10000), rand(10000), cam.loc.z + 300))
+
+		enemies.each do |enemy|
+			if (enemy.loc.z < cam.loc.z)
+				enemies.delete(enemy)
+				enemies.push(Enemy.new(rand(10000), rand(10000), cam.loc.z + 300))
+			end
+
+			enemy.update
+			eCoords = enemy.loc.getProjection(cam)
+			relSize = enemy.getRenderedSize(cam)
+			Image.new(
+				'enemy.png',
+				x: eCoords[0],
+				y: eCoords[1],
+				width: relSize[0], height: relSize[1]
+				)
+		end
+
+		player_bullets.each do |bullet|
+			puts bullet
+			if (bullet.start.z - cam.loc.z > 100)
+				player_bullets.delete(bullet)
+			else
+				bullet.update()
+				startCoords = bullet.start.getProjection(cam)
+				dz = bullet.start.z - cam.loc.z
+				# endCoords = bullet.end.getProjection(cam)
+				# Line.new(
+				# 	x1: startCoords[0],
+				# 	y1: startCoords[1],
+				# 	x2: endCoords[0],
+				# 	y2: endCoords[1],
+				# 	width:10,
+				# 	color: 'red'
+				# 	)
+				Circle.new(
+					x: startCoords[0],
+					y: startCoords[1],
+					radius: 1000/dz)
+			end
 		end
 
 		#render the Cornes of the tunnel, might use later, idk
@@ -194,7 +265,7 @@ def main
 		# rendering gray rectangles
 		
 	end
-
+#END UPDATE LOOP
 	show
 end
 
